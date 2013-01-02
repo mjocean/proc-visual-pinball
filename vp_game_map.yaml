@@ -1,0 +1,62 @@
+# this file maps Visual Pinball (VP) ROM names to pyprocgame 
+#  games and yamls
+# NOTE: the location of this file is specified in the
+# config.yaml file (located in your username/.pyprocgame/)
+# or a config.yaml file in the working directory where the
+# game is launched.  A config file found in the current 
+# working directory stops the search, and thus takes 
+# precidence over any config file in the user's directory!
+#
+# the relevant setting in the config file is:
+#   vp_game_map_file: /path-to-file/filename.yaml
+# for example, mine is, 
+#   vp_game_map_file: /P-ROC/shared/vp_game_map.yaml
+
+
+# Path to your pyprocgame directory
+rundir: C:\P-ROC\
+
+# Create an entry for each pinmame ROM associated with the VP table you want to use.
+jd_l7: 
+    # Path to the game directory - relative path from tools/register_vpcom.py
+    # so, if your putting this reg_vpcom in c:/p-roc/tools then this
+    # means games must be in /p-roc/games
+    # this value MUST start with a slash...weird no?
+    path: /../games/jd
+    # jd is the python file name, Game is the class in that file
+    kls: jd.Game
+    # Path to the machine-specific YAML
+    yaml: C:\P-ROC\shared\config\JD.yaml
+
+cftbl_l4: 
+    # Path to the game directory - relative path from tools/register_vpcom.py
+    path: /../games/cftbl
+    # cftbl is the file; CreatureGame is the Game class in that file
+    kls: cftbl.CreatureGame
+    # Path to YAML
+    yaml: C:\P-ROC\shared\config\CFTBL.yaml
+
+t2_l8: 
+    # Path to the game directory - relative path from tools/register_vpcom.py
+    # here's a fun one c:/Users/Michael/Dropbox/pinball/T2
+    path: /../../Users/Michael/Dropbox/pinball/T2
+    kls: ExampleGame.T2Game
+    # Path to YAML
+    yaml: C:\P-ROC\shared\config\T2.yaml
+
+drac_l1: 
+    # Path to the game directory - relative path from tools/register_vpcom.py
+    path: /../games/drac
+    kls: ExampleGame.BSD
+    # Path to YAML
+    yaml: C:\P-ROC\shared\config\BSD.yaml
+
+cc_13: 
+    # Path to the game directory - relative path from tools/register_vpcom.py
+    # so this is C:\P-ROC\games\cactuscanyon
+    path: /../games/cactuscanyon
+    # the CCGame class is in the game.py file
+    kls: game.CCGame
+    # Path to YAML - seems to be ignored anyway
+    yaml: C:\P-ROC\shared\config\cc.yaml
+
