@@ -157,7 +157,7 @@ class Controller:
 			# create the game object
 			## self.game = CCGame(machineType,fakePinProc,recording,playback)
 			logging.getLogger('vpcom-CCC').info("initializing...")
-			self.game = klass("wpc95", False, False, False)
+			self.game = klass("wpc95", False)
 			logging.getLogger('vpcom-CCC').info("initialized.")
 			# set the game's config path
 			self.game.yamlpath = yaml_path
