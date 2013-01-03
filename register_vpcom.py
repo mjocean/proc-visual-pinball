@@ -19,7 +19,8 @@ sys.path.append(sys.path[0]+'/..') # Set the path so we can find procgame.  We a
 import logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", filename="/P-ROC/shared/log.txt")
 
-import wingdbstub
+# don't import the WingIDE debugger everytime... Oops.
+#import wingdbstub
 
 #from procgame import fakepinproc
 import pinproc
