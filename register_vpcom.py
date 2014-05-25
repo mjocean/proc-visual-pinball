@@ -1,16 +1,36 @@
 #########
-## An updated/maintained version of register_vpcom for Visual Pinball emulation support for 
-##  	P-ROC-less and pinball-machine-less pyprocgame simulation and testing. 
-## MOcean
+## register_vpcom.py
 ##
-##	All credit goes to destruk, Gerry Stellenberg and Adam Premble 
+## a Visual Pinball to P-ROC COM Bridge
+##  that provides a P-ROC-less and pinball-machine-less 
+##  pyprocgame simulation and testing environment. 
+##
+##	All credit goes to destruk, Gerry Stellenberg and Adam Preble; all I'm 
+##	 doing is trying to keep it current.  The basic idea is to make this option
+##	 better for folks doing pyprocgame development using VP to test imperfect code.
+##	 logging is better now, and you should have to make fewer changes to the VBScript
+##	 in a VP table for this to work.
 ## 
-## changes: 1) Added another (overloaded) SetMech method with three args so fewer VP tables 
+##	See the GitHub page for instructions for use
+##
+## changes: 
+##		5.25.2014:
+##			0. Switch to the directory that contains the game prior to running.  Without this
+##			   you might have needed a lot of changes to your game code to not use '.' in paths
+##			1. Better logging throughout.  Anything in the PyProcGame side that causes 
+##			   the game code to crash at any point (from init to execution) will now add an
+##			   exception into the log file.  This makes debugging possible
+##					TIP: use the MinGW command 'tail' to monitor your log as you execute!
+##						For me this is: tail -f /c/P-ROC/shared/log.txt 
+##			2. added an optional second arg to Run --apparently some tables send it and
+##			   I don't know why.  Ignoring it is safe.
+##			3. Removed the separate init path for CCC -- epthegeek changed his code a while back
+##			   such that this is no longer required
+##		01.03.2013:
+## 			1.  Added another SetMech interface/method with three args so fewer VP tables 
 ##			need to be editted before running
-##			2) Some hacks are in the code with very alpha support for Mechs in T2 (which are 
+##			2.  Some hacks are in the code with very alpha support for Mechs in T2 (which are 
 ##			supported in the simulator files (t2.cpp) in PinMame);  Check setMech and getMech
-## 			3) separate initilization path that detects Cactus Canyon Continued so that CCC
-##			doesn't need a re-write and VP can emulate the current version
 
 import os
 import sys
@@ -129,9 +149,13 @@ class Controller:
 		""" Unused by pyprocgame. """
         	return True
         
-	def Run(self):
+	def Run(self, extra_arg=None):
 		""" Figure out which game to play based on the contents of the 
 		vp_game_map_file. """
+
+		if(extra_arg is not None):
+			logging.getLogger('vpcom').info("Run received extra arg!?")
+			logging.getLogger('vpcom').info("Arg was {0}".format(extra_arg))
 
 		vp_game_map_file = config.value_for_key_path(keypath='vp_game_map_file', default='/.')
 		vp_game_map = yaml.load(open(vp_game_map_file, 'r'))
@@ -139,61 +163,75 @@ class Controller:
 		game_path = vp_game_map[self.GameName]['path']
 		yamlpath = vp_game_map[self.GameName]['yaml']
 
-		rundir = vp_game_map['rundir']
-		os.chdir(rundir)
+		## this didn't seem to do anything useful
+		# rundir = vp_game_map['rundir']
+		# os.chdir(rundir)
 
+		# find the class of the game instance
 		klass = util.get_class(game_class,game_path)
-		
-		### seperate handler code for Cactus Canyon Continued
-		# logging.getLogger('vpcom').info("Coil # %d " % number )
-		
-		if(game_class=="game.CCGame"):
-			logging.getLogger('vpcom').info("Cactus Canyon Continued, detected.")
-			## Setup paths
-			curr_file_path = os.path.dirname(os.path.abspath( __file__ ))
-			yaml_path = curr_file_path + "/config/cc_machine.yaml"
-			logging.getLogger('vpcom-CCC').info("yaml_path=[%s]" % yaml_path)
-			
-			# create the game object
-			## self.game = CCGame(machineType,fakePinProc,recording,playback)
-			logging.getLogger('vpcom-CCC').info("initializing...")
-			self.game = klass("wpc95", False)
-			logging.getLogger('vpcom-CCC').info("initialized.")
-			# set the game's config path
-			self.game.yamlpath = yaml_path
-			# fire off the setup
-			logging.getLogger('vpcom-CCC').info("Calling setup...")
-			self.game.setup()
-			logging.getLogger('vpcom-CCC').info("Setup complete.")
-			# then run that sucker -- this is called later
-			# game.run_loop()
-			########
-		else:
-		 	self.game = klass()
-			self.game.yamlpath = yamlpath
 
+		# instead, switch to the directory of the current game, to minimize
+		# code changes for existing games!
+		curr_file_path = os.path.dirname(os.path.abspath( __file__ ))
+		os.chdir(curr_file_path + game_path)
+				
+		try:
+		 	self.game = klass()
+		except Exception, e:
+			logging.getLogger('vpcom').info("game instantiation error({0})".format(e))
+			raise
+
+		self.game.yamlpath = yamlpath
 		self.game.log("GameName: " + str(self.GameName))
 		self.game.log("SplashInfoLine: " + str(self.SplashInfoLine))
 
-		if(self.game.machine_type is None):
-			game_config = yaml.load(open(yamlpath, 'r'))
-			self.game.machine_type = game_config['PRGame']['machineType']
+		try:
+			if(self.game.machine_type is None):
+				game_config = yaml.load(open(yamlpath, 'r'))
+				self.game.machine_type = game_config['PRGame']['machineType']
 
 
-	 	self.last_lamp_states = self.getLampStates()
-	 	self.last_coil_states = self.getCoilStates()
-		#self.game.setup()
-		#every game has an init class, so run that instead of the setup call
-		#init is already called automatically above so we don't need to call it twice
-		#self.game.__init__()
+		 	self.last_lamp_states = self.getLampStates()
+		 	self.last_coil_states = self.getCoilStates()
+			#self.game.setup()
+			#every game has an init class, so run that instead of the setup call
+			#init is already called automatically above so we don't need to call it twice
+			#self.game.__init__()
 
-		# Initialize switches.  Call SetSwitch so it can invert
-		# normally closed switches as appropriate.
-		for i in range(0,120):
-			self.SetSwitch(i, False)
-		thread.start_new_thread(self.game.run_loop,())
+			# Initialize switches.  Call SetSwitch so it can invert
+			# normally closed switches as appropriate.
+			for i in range(0,120):
+				self.SetSwitch(i, False)
+		except Exception, e:
+			logging.getLogger('vpcom').info("Post-Init Error({0})".format(e))
+			raise
+
+		# thread.start_new_thread(self.game.run_loop,(None,exeption_cb))
+		thread.start_new_thread(self.RunGame,())
 
 		return True
+
+	def RunGame(self):
+		try:
+			self.game.run_loop()
+		except Exception, e:
+			import traceback
+		 	exc_type, exc_value, exc_traceback = sys.exc_info()
+			#traceback.print_exception(exc_type, exc_value, exc_traceback,
+			#                          limit=2, file=sys.stdout)
+			#print "*** format_exc, first and last line:"
+			formatted_lines = traceback.format_exc().splitlines()
+			#print formatted_lines[0]
+			exceptionName =  formatted_lines[-1]
+
+			## dump out the details six ways from sunday; 
+			## TODO: choose the one that looks the best an delete the others!
+			logging.getLogger('vpcom').info("FAILED")
+			logging.getLogger('vpcom').info("Exception Name {0}".format(exceptionName))			
+			logging.getLogger('vpcom').info("FAILED {0}".format(ex))
+			logging.getLogger('vpcom').info("LINE {0}".format(exc_traceback.tb_lineno))
+			logging.getLogger('vpcom').info("FAILED {0}".format(repr(traceback.format_tb(exc_traceback))))
+			os._exit()
 		
 	def Stop(self):
 		self.game.end_run_loop()
