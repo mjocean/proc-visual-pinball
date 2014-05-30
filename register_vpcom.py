@@ -14,8 +14,13 @@
 ##	See the GitHub page for instructions for use
 ##
 ## changes: 
+##		5.30.2014:
+##			0. Added the ability to track if the game has crashed and respond to successive COM
+##				calls with a COMException so that Visual Pinball will show a dialog box on Python
+##				failure, and the dialog actually tells you where in the Python the code crashed.
+##			1. Fixed the formatting on the logged stack trace on failure. 
 ##		5.25.2014:
-##			0. Switch to the directory that contains the game prior to running.  Without this
+##			0. Switches to the directory that contains the game prior to running.  Without this
 ##			   you might have needed a lot of changes to your game code to not use '.' in paths
 ##			1. Better logging throughout.  Anything in the PyProcGame side that causes 
 ##			   the game code to crash at any point (from init to execution) will now add an
@@ -34,6 +39,9 @@
 
 import os
 import sys
+from win32com.server.exception import COMException
+import winerror
+
 sys.path.append(sys.path[0]+'/..') # Set the path so we can find procgame.  We are assuming (stupidly?) that the first member is our directory.
 
 import logging
@@ -138,6 +146,8 @@ class Controller:
 	mechs = {}
 
 	HandleMechanics = True
+	GameIsDead = False
+	ErrorMsg = "Python Failed -- check the log"
 
 	# Need to overload this method to tell that we support IID_IServerWithEvents
 	def _query_interface_(self, iid):
@@ -217,25 +227,31 @@ class Controller:
 		except Exception, e:
 			import traceback
 		 	exc_type, exc_value, exc_traceback = sys.exc_info()
+
 			#traceback.print_exception(exc_type, exc_value, exc_traceback,
 			#                          limit=2, file=sys.stdout)
 			#print "*** format_exc, first and last line:"
 			formatted_lines = traceback.format_exc().splitlines()
-			#print formatted_lines[0]
 			exceptionName =  formatted_lines[-1]
 
 			## dump out the details six ways from sunday; 
 			## TODO: choose the one that looks the best an delete the others!
-			logging.getLogger('vpcom').info("FAILED")
-			logging.getLogger('vpcom').info("Exception Name {0}".format(exceptionName))			
-			logging.getLogger('vpcom').info("FAILED {0}".format(ex))
-			logging.getLogger('vpcom').info("LINE {0}".format(exc_traceback.tb_lineno))
-			logging.getLogger('vpcom').info("FAILED {0}".format(repr(traceback.format_tb(exc_traceback))))
-			os._exit()
+			logger = logging.getLogger('vpcom')
+			logger.info("PYTHON FAILURE (Visual Pinball Bridge is now broken)")
+			logger.info("Exception Name {0}".format(exceptionName))
+			for l in formatted_lines:
+				logger.info("{0}".format(l))
+			if(len(formatted_lines) > 2):
+				self.ErrorMsg += "\n" + formatted_lines[-3] + "\n" + formatted_lines[-2] + "\n" + formatted_lines[-1]
+			#raise COMException(desc=self.ErrorMsg,scode=winerror.E_FAIL)
+
+			self.GameIsDead = True
+			#os._exit(1)
 		
 	def Stop(self):
 		self.game.end_run_loop()
 		pygame.display.quit()
+		pygame.font.quit()
 		pygame.quit()
 		return 1
 
@@ -253,11 +269,16 @@ class Controller:
 		
 	def Switch(self, number):
 		""" Return the current value of the requested switch. """
+		if(self.GameIsDead):
+			raise COMException(desc=self.ErrorMsg,scode=winerror.E_FAIL)
+			
 		if number != None: self.lastSwitch = number
 		return self.switch[self.lastSwitch]
 				
 	def SetSwitch(self, number, value):
 		""" Set the value of the requested switch. """
+		if(self.GameIsDead):
+			raise COMException(desc=self.ErrorMsg,scode=winerror.E_FAIL)
 
 		# All of the 'None' logic is error handling for unexpected
 		# cases when None is passed in as a parameter.  This seems to
@@ -323,16 +344,22 @@ class Controller:
 	def Mech(self, number):
 		""" Currently unused.  Game specific mechanism handling will
 		be called through this method. """
+		if(self.GameIsDead):
+			raise COMException(desc=self.ErrorMsg,scode=winerror.E_FAIL)
 		return True
 
 	def SetMech(self, number):
 		""" Currently unused.  Game specific mechanism handling will
 		be called through this method. """
+		if(self.GameIsDead):
+			raise COMException(desc=self.ErrorMsg,scode=winerror.E_FAIL)
 		return True
 
 	def SetMech(self, number, args):
 		""" Currently unused.  Game specific mechanism handling will
 		be called through this method. """
+		if(self.GameIsDead):
+			raise COMException(desc=self.ErrorMsg,scode=winerror.E_FAIL)
 		
 		if(self.GameName=="t2_l8"):
 			self.SetSwitch(33, True) # gun is home...
@@ -352,6 +379,8 @@ class Controller:
 	def GetMech(self, number):
 		""" Currently unused.  Game specific mechanism handling will
 		be called through this method. """
+		if(self.GameIsDead):
+			raise COMException(desc=self.ErrorMsg,scode=winerror.E_FAIL)
 
 		if(self.GameName=="t2_l8"):
 			# if the coil associated with this mech is on
@@ -380,6 +409,9 @@ class Controller:
 
 	def ChangedSolenoids(self):
 		""" Return a list of changed coils. """
+		if(self.GameIsDead):
+			raise COMException(desc=self.ErrorMsg,scode=winerror.E_FAIL)
+
 		coils = self.getCoilStates()
 		changedCoils = []
 		
@@ -397,6 +429,9 @@ class Controller:
 		
 	def ChangedLamps(self):
 		""" Return a list of changed lamps. """
+		if(self.GameIsDead):
+			raise COMException(desc=self.ErrorMsg,scode=winerror.E_FAIL)
+
 		lamps = self.getLampStates()
 		changedLamps = []
 		
@@ -410,6 +445,9 @@ class Controller:
 
 	def ChangedGIStrings(self):
 		""" Return a list of changed GI strings. """
+		if(self.GameIsDead):
+			raise COMException(desc=self.ErrorMsg,scode=winerror.E_FAIL)
+
 		gi = self.getGIStates()
 		changedGI = []
 
@@ -423,6 +461,9 @@ class Controller:
 			
 	def getGIStates(self):
 		""" Gets the current state of the GI strings. """
+		if(self.GameIsDead):
+			raise COMException(desc=self.ErrorMsg,scode=winerror.E_FAIL)
+
 		vpgi = [False]*5
 	
 		for i in range(0,5):
@@ -434,6 +475,9 @@ class Controller:
 		
 	def getLampStates(self):
 		""" Gets the current state of the lamps. """
+		if(self.GameIsDead):
+			raise COMException(desc=self.ErrorMsg,scode=winerror.E_FAIL)
+
 		vplamps = [False]*90
 	
 		for i in range(0,64):
@@ -444,6 +488,8 @@ class Controller:
 		
 	def getCoilStates(self):
 		""" Gets the current state of the coils. """
+		if(self.GameIsDead):
+			raise COMException(desc=self.ErrorMsg,scode=winerror.E_FAIL)
 
 		pycoils = self.game.proc.drivers
 		vpcoils = [False]*64
