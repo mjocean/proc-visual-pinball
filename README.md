@@ -2,8 +2,9 @@ proc-visual-pinball
 ===================
 An updated/maintained version of 'register_vpcom' a Visual Pinball to P-ROC "COM Bridge" to enable the use of PyProcGame/P-ROC game development against a virtual table composed in Visual Pinball.  In short, this provides a P-ROC-less and pinball-machine-less path to  PyProcGame development, simulation, and testing. 
 
-All credit should goes to destruk, Gerry Stellenberg and Adam Preble for creating the original version; all I'm doing is trying to keep it current.  The basic idea is to make this option better for folks doing pyprocgame development using VP to test imperfect code.  In this latest version you should have to make fewer changes to the VBScript in a VP table for this to work, error logging is greatly improved, and VP will display a dialog box on Python.
+All credit should goes to destruk, Gerry Stellenberg and Adam Preble for creating the original version; all I'm doing is trying to keep it current.  The basic idea is to make this option better for folks doing pyprocgame development using VP to test imperfect code.  In this latest version you should have to make fewer changes to the VBScript in a VP table for this to work, error logging is greatly improved, and VP will display a dialog box when Python code fails instead of failing silently.
 
+For questions, general discussion, and such, head to:
 http://www.pinballcontrollers.com/forum/index.php?board=23.0
 
 -- MOcean
