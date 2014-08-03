@@ -14,6 +14,8 @@
 ##	See the GitHub page for instructions for use
 ##
 ## changes: 
+##		8.03.2014:
+##			0. Full stack traces will be logged on "initialization time" failures
 ##		5.30.2014:
 ##			0. Added the ability to track if the game has crashed and respond to successive COM
 ##				calls with a COMException so that Visual Pinball will show a dialog box on Python
@@ -189,6 +191,13 @@ class Controller:
 		 	self.game = klass()
 		except Exception, e:
 			logging.getLogger('vpcom').info("game instantiation error({0})".format(e))
+			logger = logging.getLogger('vpcom')
+			logger.info("PYTHON FAILURE (Visual Pinball Bridge is now broken)")
+			logger.info("Exception Name {0}".format(exceptionName))
+			for l in formatted_lines:
+				logger.info("{0}".format(l))
+			if(len(formatted_lines) > 2):
+				self.ErrorMsg += "\n" + formatted_lines[-3] + "\n" + formatted_lines[-2] + "\n" + formatted_lines[-1]
 			raise
 
 		self.game.yamlpath = yamlpath
@@ -214,6 +223,13 @@ class Controller:
 				self.SetSwitch(i, False)
 		except Exception, e:
 			logging.getLogger('vpcom').info("Post-Init Error({0})".format(e))
+			logger = logging.getLogger('vpcom')
+			logger.info("PYTHON FAILURE (Visual Pinball Bridge is now broken)")
+			logger.info("Exception Name {0}".format(exceptionName))
+			for l in formatted_lines:
+				logger.info("{0}".format(l))
+			if(len(formatted_lines) > 2):
+				self.ErrorMsg += "\n" + formatted_lines[-3] + "\n" + formatted_lines[-2] + "\n" + formatted_lines[-1]
 			raise
 
 		# thread.start_new_thread(self.game.run_loop,(None,exeption_cb))
