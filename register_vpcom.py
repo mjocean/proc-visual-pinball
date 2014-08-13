@@ -14,6 +14,9 @@
 ##	See the GitHub page for instructions for use
 ##
 ## changes: 
+##		8.12.2014:
+##			0. Fixed some bugs that were still preventing full stack traces to be logged 
+##				on "initialization time" failures
 ##		8.03.2014:
 ##			0. Full stack traces will be logged on "initialization time" failures
 ##		5.30.2014:
@@ -190,10 +193,16 @@ class Controller:
 		try:
 		 	self.game = klass()
 		except Exception, e:
-			logging.getLogger('vpcom').info("game instantiation error({0})".format(e))
+			import traceback
+		 	exc_type, exc_value, exc_traceback = sys.exc_info()
+
+			formatted_lines = traceback.format_exc().splitlines()
+			exceptionName =  formatted_lines[-1]
+
+			logging.getLogger('vpcom').info("game instantiation error({0})".format(exceptionName))
 			logger = logging.getLogger('vpcom')
 			logger.info("PYTHON FAILURE (Visual Pinball Bridge is now broken)")
-			logger.info("Exception Name {0}".format(exceptionName))
+			logger.info("Exception Name {0}".format(e))
 			for l in formatted_lines:
 				logger.info("{0}".format(l))
 			if(len(formatted_lines) > 2):
@@ -222,10 +231,16 @@ class Controller:
 			for i in range(0,120):
 				self.SetSwitch(i, False)
 		except Exception, e:
-			logging.getLogger('vpcom').info("Post-Init Error({0})".format(e))
+			import traceback
+		 	exc_type, exc_value, exc_traceback = sys.exc_info()
+
+			formatted_lines = traceback.format_exc().splitlines()
+			exceptionName =  formatted_lines[-1]
+
+			logging.getLogger('vpcom').info("Post-Init Error({0})".format(exceptionName))
 			logger = logging.getLogger('vpcom')
 			logger.info("PYTHON FAILURE (Visual Pinball Bridge is now broken)")
-			logger.info("Exception Name {0}".format(exceptionName))
+			logger.info("Exception Name {0}".format(e))
 			for l in formatted_lines:
 				logger.info("{0}".format(l))
 			if(len(formatted_lines) > 2):
