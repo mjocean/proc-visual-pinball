@@ -86,7 +86,7 @@ Code:
 8. drop/merge my sample vp_game_map.yaml into \P-ROC\shared
 (feel free to omit my over-the-top comments, I find these things helpful)
 *Get/edit the .vpt file:*
-9. Go to vpforums.org, register, and download a Virtual Pinball table (.vpt) for the game you want to run.  For Example, for Cactus Canyon I recommend this one: CactusCanyon_1-1_Sun9.vpt 
+9. Go to vpforums.org, register, and download a Visual Pinball table (.vpt) for the game you want to run.  For Example, for Cactus Canyon I recommend this one: CactusCanyon_1-1_Sun9.vpt 
 and place the vpt in c:\P-ROC; location should not matter, if your config files are in the right places.
 10. Run Visual Pinball as administrator!!  I can't stress that enough...
 11. Open the vpt file and edit the script (button on the left).  Find the line: 
