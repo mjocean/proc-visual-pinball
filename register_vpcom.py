@@ -14,6 +14,14 @@
 ##	See the GitHub page for instructions for use
 ##
 ## changes: 
+##		8.24.2014:
+##			This is the first version with "automatic" System 11 and Data East support.
+##			in your VBScript for the table, also set the Controller's new Sys11 property as:
+##				controller.Sys11=True
+##			this will have the VPCOM bridge auto-renumber lamps and switches from the 1-64
+##			numbering in the manual (and that all Sys11/DE VPT tables use) to the P-ROC expected
+##			Col/Row numbering.  No more renumbering all the lamps and switches in the VBScript
+##			for System11 and Data East machines.  Tested on DE Hook.
 ##		8.12.2014:
 ##			0. Fixed some bugs that were still preventing full stack traces to be logged 
 ##				on "initialization time" failures
@@ -124,7 +132,8 @@ class Controller:
 				'ChangedSolenoids',
 				'ChangedGIStrings',
 				'ChangedLamps',
-				'GetMech']
+				'GetMech',
+				'Sys11']
 				
 	_readonly_attrs_ = [ 	'Version', 
 				'ChangedSolenoids',
@@ -142,6 +151,7 @@ class Controller:
 	switch = [True]*128
 	lastSwitch = None
 	Pause = None
+	Sys11 = False
 	
 	game = None
 	last_lamp_states = []
@@ -177,21 +187,27 @@ class Controller:
 		game_class = vp_game_map[self.GameName]['kls']
 		game_path = vp_game_map[self.GameName]['path']
 		yamlpath = vp_game_map[self.GameName]['yaml']
+		logging.getLogger('vpcom').info("S11 is ..." + str(self.Sys11))
 
 		## this didn't seem to do anything useful
 		# rundir = vp_game_map['rundir']
 		# os.chdir(rundir)
 
-		# find the class of the game instance
-		klass = util.get_class(game_class,game_path)
-
-		# instead, switch to the directory of the current game, to minimize
-		# code changes for existing games!
-		curr_file_path = os.path.dirname(os.path.abspath( __file__ ))
-		os.chdir(curr_file_path + game_path)
-				
 		try:
+			# find the class of the game instance
+			klass = util.get_class(game_class,game_path)
+
+			# instead, switch to the directory of the current game, to minimize
+			# code changes for existing games!
+			curr_file_path = os.path.dirname(os.path.abspath( __file__ ))
+			os.chdir(curr_file_path + game_path)
+				
 		 	self.game = klass()
+
+			self.game.yamlpath = yamlpath
+			self.game.log("GameName: " + str(self.GameName))
+			self.game.log("SplashInfoLine: " + str(self.SplashInfoLine))
+
 		except Exception, e:
 			import traceback
 		 	exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -209,9 +225,6 @@ class Controller:
 				self.ErrorMsg += "\n" + formatted_lines[-3] + "\n" + formatted_lines[-2] + "\n" + formatted_lines[-1]
 			raise
 
-		self.game.yamlpath = yamlpath
-		self.game.log("GameName: " + str(self.GameName))
-		self.game.log("SplashInfoLine: " + str(self.SplashInfoLine))
 
 		try:
 			if(self.game.machine_type is None):
@@ -302,6 +315,9 @@ class Controller:
 		""" Return the current value of the requested switch. """
 		if(self.GameIsDead):
 			raise COMException(desc=self.ErrorMsg,scode=winerror.E_FAIL)
+
+		if(self.Sys11==False):	
+			number = ((number/8)+1)*10 + number % 8
 			
 		if number != None: self.lastSwitch = number
 		return self.switch[self.lastSwitch]
@@ -321,14 +337,28 @@ class Controller:
 		if number == None: return self.Switch(number)
 		if number != None: self.lastSwitch = number
 		self.switch[self.lastSwitch] = value
-		
-		if self.lastSwitch < 10:
-			prNumber = self.VPSwitchDedToPRSwitch(self.lastSwitch)
-		elif self.lastSwitch < 110:
-			prNumber = self.VPSwitchMatrixToPRSwitch(self.lastSwitch)
-		elif self.lastSwitch < 120:
-			prNumber = self.VPSwitchFlipperToPRSwitch(self.lastSwitch)
-		else: prNumber = 0
+
+		if(self.Sys11==False):	
+			if self.lastSwitch < 10:
+				prNumber = self.VPSwitchDedToPRSwitch(self.lastSwitch)
+			elif self.lastSwitch < 110:
+				prNumber = self.VPSwitchMatrixToPRSwitch(self.lastSwitch)
+			elif self.lastSwitch < 120:
+				prNumber = self.VPSwitchFlipperToPRSwitch(self.lastSwitch)
+			else: prNumber = 0
+		else:
+			if self.lastSwitch < 1:
+				prNumber = self.VPSwitchDedToPRSwitch(abs(self.lastSwitch))
+			elif(self.lastSwitch==82):
+				prNumber = pinproc.decode(self.game.machine_type, 'SF1')
+			elif(self.lastSwitch == 84):
+				prNumber = pinproc.decode(self.game.machine_type, 'SF2')
+			elif(self.lastSwitch < 65):
+				# number = number -1
+				prNumber = (((number/8)+1)*10) + ((number % 8))
+				prNumber = self.VPSwitchMatrixToPRSwitch(prNumber)
+			else: prNumber = 0
+
 
 		if not self.game.switches.has_key(prNumber): return False
 		if self.game.switches[prNumber].type == 'NC': 
@@ -358,7 +388,6 @@ class Controller:
 			switch = 'S' + str(vpIndex) + str(vpOffset)
 			return pinproc.decode(self.game.machine_type,switch)
 		else: return number
-
 			
 	def VPSwitchFlipperToPRSwitch(self, number):
 		""" Helper method to find the P-ROC number of a flipper switch. """
@@ -372,6 +401,11 @@ class Controller:
 		switch = 'SD' + str(vpNumber)
 		return pinproc.decode(self.game.machine_type, switch)
 	
+	def Sys11(self, state):
+		self.Sys11 = state
+		logging.getLogger('vpcom').info("S11 is ..." + str(state))
+			
+
 	def Mech(self, number):
 		""" Currently unused.  Game specific mechanism handling will
 		be called through this method. """
@@ -510,11 +544,15 @@ class Controller:
 			raise COMException(desc=self.ErrorMsg,scode=winerror.E_FAIL)
 
 		vplamps = [False]*90
-	
-		for i in range(0,64):
-			vpNum = (((i/8)+1)*10) + (i%8) + 1
-			vplamps[vpNum] = self.game.proc.drivers[i+80].curr_state
-			
+
+		if(self.Sys11==False):	
+			for i in range(0,64):
+				vpNum = (((i/8)+1)*10) + (i%8) + 1
+				vplamps[vpNum] = self.game.proc.drivers[i+80].curr_state
+		else:
+			for i in range(0,64):
+				vpNum = i+1
+				vplamps[vpNum] = self.game.proc.drivers[i+80].curr_state					
 		return vplamps
 		
 	def getCoilStates(self):
