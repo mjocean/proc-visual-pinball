@@ -14,6 +14,10 @@
 ##	See the GitHub page for instructions for use
 ##
 ## changes: 
+##		8.27.2014:
+##			0. Fixed some bugs introduced by Sys11 support that broke non-Sys11 (e.g., WPC support).
+##			1. Added in System11 ACRelay 'renumbering' (a/k/a lying) like pinmame does.  Fewer changes
+##				to run stock tables.
 ##		8.24.2014:
 ##			This is the first version with "automatic" System 11 and Data East support.
 ##			in your VBScript for the table, also set the Controller's new Sys11 property as:
@@ -152,6 +156,7 @@ class Controller:
 	lastSwitch = None
 	Pause = None
 	Sys11 = False
+	ACrelayNumber = 12
 	
 	game = None
 	last_lamp_states = []
@@ -316,7 +321,7 @@ class Controller:
 		if(self.GameIsDead):
 			raise COMException(desc=self.ErrorMsg,scode=winerror.E_FAIL)
 
-		if(self.Sys11==False):	
+		if(self.Sys11 != True):	
 			number = ((number/8)+1)*10 + number % 8
 			
 		if number != None: self.lastSwitch = number
@@ -338,15 +343,7 @@ class Controller:
 		if number != None: self.lastSwitch = number
 		self.switch[self.lastSwitch] = value
 
-		if(self.Sys11==False):	
-			if self.lastSwitch < 10:
-				prNumber = self.VPSwitchDedToPRSwitch(self.lastSwitch)
-			elif self.lastSwitch < 110:
-				prNumber = self.VPSwitchMatrixToPRSwitch(self.lastSwitch)
-			elif self.lastSwitch < 120:
-				prNumber = self.VPSwitchFlipperToPRSwitch(self.lastSwitch)
-			else: prNumber = 0
-		else:
+		if(self.Sys11==True):	
 			if self.lastSwitch < 1:
 				prNumber = self.VPSwitchDedToPRSwitch(abs(self.lastSwitch))
 			elif(self.lastSwitch==82):
@@ -357,6 +354,14 @@ class Controller:
 				# number = number -1
 				prNumber = (((number/8)+1)*10) + ((number % 8))
 				prNumber = self.VPSwitchMatrixToPRSwitch(prNumber)
+			else: prNumber = 0
+		else:
+			if self.lastSwitch < 10:
+				prNumber = self.VPSwitchDedToPRSwitch(self.lastSwitch)
+			elif self.lastSwitch < 110:
+				prNumber = self.VPSwitchMatrixToPRSwitch(self.lastSwitch)
+			elif self.lastSwitch < 120:
+				prNumber = self.VPSwitchFlipperToPRSwitch(self.lastSwitch)
 			else: prNumber = 0
 
 
@@ -400,11 +405,6 @@ class Controller:
 		vpNumber = number
 		switch = 'SD' + str(vpNumber)
 		return pinproc.decode(self.game.machine_type, switch)
-	
-	def Sys11(self, state):
-		self.Sys11 = state
-		logging.getLogger('vpcom').info("S11 is ..." + str(state))
-			
 
 	def Mech(self, number):
 		""" Currently unused.  Game specific mechanism handling will
@@ -545,7 +545,7 @@ class Controller:
 
 		vplamps = [False]*90
 
-		if(self.Sys11==False):	
+		if(self.Sys11 == True):	
 			for i in range(0,64):
 				vpNum = (((i/8)+1)*10) + (i%8) + 1
 				vplamps[vpNum] = self.game.proc.drivers[i+80].curr_state
@@ -563,9 +563,20 @@ class Controller:
 		pycoils = self.game.proc.drivers
 		vpcoils = [False]*64
 	
+		if(self.Sys11 == True):
+			ACState = pycoils[12+39].curr_state
+
 		for i in range(0,len(vpcoils)):
-			if i<=28: vpcoils[i] = pycoils[i+39].curr_state
-			elif i<33: vpcoils[i] = False # Unused?
+
+			if i < 33:
+				if(self.Sys11!=True):
+					if i<=28: vpcoils[i] = pycoils[i+39].curr_state
+					elif i<=32: vpcoils[i] = False # Unused?
+
+				else: # do the relay lying here...
+					if i<=8: vpcoils[i] = pycoils[i+39].curr_state and (ACState == False)
+					elif i<=24: vpcoils[i] = pycoils[i+39].curr_state
+					elif i<=32: vpcoils[i] = pycoils[i+39].curr_state and (ACState == True)
 
 			# Use the machine's Hold coils for the VP flippers
 			# since they stay on until the button is released
