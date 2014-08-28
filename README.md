@@ -42,21 +42,21 @@ Changes:
     2.  Some hacks are in the code with very alpha support for Mechs in T2 (which are 
     supported in the simulator files (t2.cpp) in PinMame);  Check setMech and getMech
 
-How to guide (for CCC, as an example):
+How to guide (best off with JD, as an example):
 ====
 basic installation stuff
 ----
 1. Use Compy's One-Click P-ROC development Environment installer @ http://www.pinballcontrollers.com/forum/index.php?topic=626.0
 2. Install Visual Pinball v9.14 (http://www.pinballcontrollers.com/wiki/Pyprocgame_vp ; follow from "Install Visual Pinball (Available on vpforums.org in the Getting Started menu)." to the end of that section -- note you will need to install the scripts and such).
-3. Get the Python code for the game you want to play --e.g., Cactus Canyon Continued, Judge Dredd, etc. -- and unzip it into a directory under c:\P-ROC\games.  You'll need to make sure you have all the DMD and audio assets, too.  Example: In the case of CCC you'll  have your game here:
+3. Get the Python code for the game you want to play --e.g., Judge Dredd (https://github.com/preble/JD-pyprocgame). -- and unzip it into a directory under c:\P-ROC\games.  You'll need to make sure you have all the DMD and audio assets, too.  Example: In the case of JD you'll  have your game here:
 
-    c:\P-ROC\games\cactuscanyon
+    c:\P-ROC\games\jd
 
 register_vpcom.py stuff:
 ---
 4. Get/run the PythonWin32 installer (this allows Python code to run as a COM object) 
    http://sourceforge.net/projects/pywin32/files/pywin32/Build216/pywin32-216.win32-py2.6.exe/download
-5. Copy the register_vpcom.py file available from this GitHub repo into c:\P-ROC\tools
+5. Copy the register_vpcom.py file available from this GitHub repo into c:\P-ROC\tools (you will need to make this directory)
 6. On the command line: (to get a command line, you can always use [win]+[R], "cmd", [enter]) 
 
 Code:
@@ -86,7 +86,7 @@ Code:
 8. drop/merge my sample vp_game_map.yaml into \P-ROC\shared
 (feel free to omit my over-the-top comments, I find these things helpful)
 *Get/edit the .vpt file:*
-9. Go to vpforums.org, register, and download a Visual Pinball table (.vpt) for the game you want to run.  For Example, for Cactus Canyon I recommend this one: CactusCanyon_1-1_Sun9.vpt 
+9. Go to vpforums.org, register, and download a Visual Pinball table (.vpt) for the game you want to run.  For Example, Judge Dredd 
 and place the vpt in c:\P-ROC; location should not matter, if your config files are in the right places.
 10. Run Visual Pinball as administrator!!  I can't stress that enough...
 11. Open the vpt file and edit the script (button on the left).  Find the line: 
@@ -97,7 +97,7 @@ and change it to:
     
     Set Controller = CreateObject("VPROC.Controller")
 
-12. Launch Cactus Canyon (or whatever) in Visual Pinball (F5) to test.
+12. 'Play' the table in Visual Pinball (F5) to test.
 
 Again, always make sure you're running Visual Pinball as an Administrator otherwise you will get a python error because it won't be able to open the necessary files.  
 
