@@ -545,7 +545,7 @@ class Controller:
 
 		vplamps = [False]*90
 
-		if(self.Sys11 == True):	
+		if(self.Sys11 == False):	
 			for i in range(0,64):
 				vpNum = (((i/8)+1)*10) + (i%8) + 1
 				vplamps[vpNum] = self.game.proc.drivers[i+80].curr_state
