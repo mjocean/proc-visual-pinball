@@ -321,7 +321,7 @@ class Controller:
 		if(self.GameIsDead):
 			raise COMException(desc=self.ErrorMsg,scode=winerror.E_FAIL)
 
-		if(self.Sys11 != True):	
+		if(self.Sys11 == True) and (number != None):	
 			number = ((number/8)+1)*10 + number % 8
 			
 		if number != None: self.lastSwitch = number
